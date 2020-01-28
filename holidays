@@ -1,0 +1,49 @@
+#!/bin/sh
+
+######################################################################
+#
+# HOLIDAYS - get holidays from goole calendar api
+# 
+# USAGE: holidays
+#
+######################################################################
+
+
+######################################################################
+# Initial Configuration
+######################################################################
+
+# === Initialize shell environment ===================================
+set -u
+umask 0022
+export LC_ALL=C
+type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
+export PATH="$(command -p getconf PATH)${PATH+:}${PATH-}"
+export UNIX_STD=2003  # to make HP-UX conform to POSIX
+
+
+
+# This URL was gained from "calendar settings" -> "japanese holidays" -> "ICAL"(2016/09/01)
+url='https://calendar.google.com/calendar/ical/ja.japanese%23holiday%40group.v.calendar.google.com/public/basic.ics'
+
+if   type curl >/dev/null 2>&1; then        #
+  curl -s "$url"                            # -s: silent mode
+elif type wget >/dev/null 2>&1; then        #
+  wget -q -O - "$url"                       # -q: quiet. no output; 
+fi                                          |
+sed -n '/^BEGIN:VEVENT/,/^ENDVEVENT/p'      |  # -n: quiet; /p: output result;
+awk '/^BEGIN:VEVENT/{                       # === iCalendar(RFC 5545) Format ===
+       rec++;                               # === extract date and summary ===
+     }                                      # increment rec number
+     match($0,/^DTSTART.*DATE:/){           # --- DTSTART line ---
+       print rec,1,substr($0,RLENGTH+1)     # <record number> "1" <date>
+     }                                      #
+     match($0,/^SUMMARY:/){                 # --- SUMMARY line ---
+       s=substr($0,RLENGTH+1);              # <record number> "2" <summary>
+       gsub(/ /,"_",s);                     # 
+       print rec,2,s;                       #
+     }'                                     |
+sort -k 1n,1 -k 2n,2                        |  # sort ordar: record number -> line number
+awk '$2==1{printf("%d ", $3);}              #
+     $2==2{print $3;         }'             |
+sort                                        # sort date ordar

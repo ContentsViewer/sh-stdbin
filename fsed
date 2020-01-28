@@ -1,0 +1,89 @@
+#! /bin/sh
+
+######################################################################
+#
+# FSED - flexible sed (Looks like the fgrep)
+#
+# Usage  : fsed <pattern_str> <substitute_str> <file> [file...]
+#
+# * fsed is more flexible substituter than the sed command. This
+#   ignores all of the functions which every meta-character of regular
+#   expression has, so that you can very easily substitute strings
+#   include various meta-characters, e.g. ^, $, \, /, &, and so on.
+#
+######################################################################
+
+
+######################################################################
+# Initial Configration
+######################################################################
+
+# === Initialize shell environment ===================================
+set -u  # exit error if undefined value is called.
+umask 0022
+export LC_ALL=C
+type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
+export PATH="$(command -p getconf PATH)${PATH+:}${PATH-}"
+export UNIX_STD=2003  # to mask HP_UX conform to POSIX
+
+# === Define the functions for printing usage and erro message =======
+print_usage_and_exit () {
+  cat <<-USAGE 1>&2
+	Usage   : ${0##*/} <pattern_str> <substitute_str> <file> [file...]
+	Version : 2018-02-25 19:57:22 JST
+	          (POSIX Bourne Shell/POSIX commands)
+	USAGE
+  exit 1 # the lines between USAGE must start with tab"\t"
+}
+
+# NOTE:
+#  ":" command ignores any parameters.
+#  For example:
+#   : false -> nothing to do but return true
+#
+warning() {
+  ${1+:} false && echo "${0##*/}: $1" 1>&2
+}
+
+
+# === Define misc variables ==========================================
+LF=$(printf '\\\n_');LF=${LF%_} # <0x0a>
+
+
+
+######################################################################
+# Argument Parsing
+######################################################################
+
+# === Parse arguments (except files) =================================
+case $# in [01]) print_usage_and_exit;; esac  # if (number of params is 0 or 1): 
+case "$1" in *"$LF"*)
+  echo "${0##*/}: It is impossible to contain <0x0A> in <pattern_str>" 1>&2
+  exit 1
+esac
+pat=$(printf '%s\n' "$1"          |
+      sed 's/\([].\*/[]\)/\\\1/g' |  # escape special characters except ^, $. ([, ], ., *, )
+      sed '1s/^^/\\^/'            |  # escape "^" on head of line
+      sed '$s/$$/\\$/'            )  # escape "$" on end of line
+sub=$(printf '%s\n' "${2}_"    |
+      sed 's/\([\&/]\)/\\\1/g' |
+      sed 's/$/\\/'            |
+      sed '$s/\\$//'           )
+sub=${sub%_}
+shift 2
+
+
+
+######################################################################
+# Main Routine
+######################################################################
+
+(cat ${1+"$@"}; echo '')                             |
+sed "s/$pat/$sub/g"                                  |
+awk 'BEGIN{ORS=""; OFS="";                           #
+           getline line;                             #
+           print line;                               #
+           dlm=sprintf("\n");                        #
+           while (getline line) {print dlm,line;} }' #
+
+

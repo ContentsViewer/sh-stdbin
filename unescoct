@@ -1,0 +1,75 @@
+#!/bin/sh
+
+######################################################################
+# 
+# UNESCOCT - A Filter of Unescaping Escaped 3-Digit-Octal Numbers
+#
+# USAGE: unescoct [file...]
+#
+######################################################################
+
+# === Initialize shell environment ===================================
+set -u
+umask 0022
+export LC_ALL=C
+type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
+export PATH="$(command -p getconf PATH)${PATH+:}${PATH-}"
+export UNIX_STD=2003  # to make HP-UX conform to POSIX
+
+# === Define the function for printing usage =========================
+print_usage_and_exit () {
+  cat <<-USAGE 1>&2
+	Usage   : ${0##*/} <file> [file...]
+	Version : 2018-10-25 01:40:00 JST
+	USAGE
+  exit 1
+}
+
+
+######################################################################
+# Argument Parsing
+######################################################################
+
+# === Print usage and eixt if one of the help options is set =========
+case "$# ${1:-}" in
+  '1 -h'|'1 --help'|'1 --version') print_usage_and_exit;;
+esac
+
+
+######################################################################
+# Main
+######################################################################
+
+(cat ${1+"$@"}; echo '')                                    |
+awk '                                                       #
+  BEGIN {                                                   #
+    OFS=""; ORS="";                                         #
+    while (getline line) {                                  #
+      while (1) {                                           #
+        if (line=="") {print "\n"; break;}                  #
+        if (match(line,/\\[0-9][0-9][0-9]/)) {              #
+          print substr(line, 1, RSTART-1);                  #
+          o=substr(line,RSTART+1,3);                        #
+          n=substr(o,1,1)*64+substr(o,2,1)*8+substr(o,3,1); #
+          print n;                                          #
+          # printf("%d",n);                                 #
+          line=substr(line,RSTART+4);                       #
+        } else {                                            #
+          print line;                                       #
+          line="";                                          #
+        }                                                   #
+      }                                                     #
+    }                                                       #
+  }                                                         #
+'                                                           |
+awk '                                                       #
+  BEGIN {                                                   #
+    ORS=""; OFS="";                                         #
+    getline line;                                           #
+    print line;                                             #
+    dlm=sprintf("\n");                                      #
+    while (getline line) {                                  #
+      print dlm,line;                                       #
+    }                                                       #
+  }                                                         #
+'

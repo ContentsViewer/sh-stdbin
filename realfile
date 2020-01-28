@@ -1,0 +1,82 @@
+#! /bin/sh
+
+######################################################################
+#
+# REALFILE - find realpath for symbolic link
+#
+# USAGE: realfile <file>
+#
+######################################################################
+
+
+
+######################################################################
+# Initial Configuration
+######################################################################
+
+# === Initialize shell environment ===================================
+set -u
+umask 0022
+export LC_ALL=C
+type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
+export PATH="$(command -p getconf PATH)${PATH+:}${PATH-}"
+export UNIX_STD=2003  # to make HP-UX conform to POSIX
+
+
+
+######################################################################
+# Argument Parsing
+######################################################################
+
+# === Check the number of arguments ==================================
+case $# in 0) exit 1;;esac
+
+
+
+file=$1
+
+while :; do
+  # 1) catch attribute and file size by ls
+  s=$(ls -adl "$file" 2>/dev/null) || {
+    printf '%s: cannot open file "%s" (Permission denied)\n' "${0##*/}" "$file" 1>&2
+    exit 1
+  }
+
+  # 2) split $s by elements
+  set -- $s
+
+  # 3) loop to find real file
+
+
+  case "$1" in
+    '') printf '%s: %s: No such file or directory\n' "${0##*/}" "$file" 1>&2
+        exit 1
+        ;;
+    -*) break
+        ;;
+    l*) s=$(printf '%s' "$file"         |
+            sed 's/\([].\*/[]\)/\\\1/g' |
+            sed 's/^\^/\\^/'            |
+            sed 's/\$$/\\$/'            )
+        # echo $s
+        srcfile=$(file "$file"                          |
+                  sed 's/^'"$s"': symbolic link to //' |
+                  sed 's/^`\(.*\)'"''"'$/\1/'               )
+        # echo $(file "$file")
+
+        case "$srcfile" in
+          /*) file=$srcfile              ;;
+           *) file="${file%/*}"/$srcfile ;;
+        esac
+        continue
+        ;;
+    *)  printf '%s\n' "${0##*/}: \`$file' is not a regular file." 1>&2
+        exit 1
+        ;;
+  esac
+
+  break
+done
+
+echo "$file"
+

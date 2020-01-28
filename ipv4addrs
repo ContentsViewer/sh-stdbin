@@ -1,0 +1,36 @@
+#!/bin/sh
+
+######################################################################
+# 
+# IPV4ADDRS - get ipv4 address
+#
+# USAGE: ipv4addrs
+#
+# NOTE:
+#  This is not POSIX
+######################################################################
+
+
+
+set -u
+umask 0022
+export LC_ALL=C
+type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
+export PATH="$(command -p getconf PATH)${PATH+:}${PATH-}"
+export UNIX_STD=2003
+
+# ifconfig -a                                       |  #
+# grep inet[^6]                                     |  # extract lines including ipv4 address
+# sed 's/.*inet[^6][^0-9]*\([0-9.]*\)[^0-9]*.*/\1/' |  # extract only ipv4 address
+# grep -v '^127\.'                                  |  # remove loop back address
+# grep -v '^10\.'                                   |  # remove private address(class A)
+# grep -v '^172\.\(1[6-9]\|2[0-9]\|3[01]\)\.'       |  # remove private address(class B)
+# grep -v '^192\.168\.'                             |  # remove private address(class C)
+# grep -v '^169\.254\.'                             |  # remove link local
+# cat
+
+
+ifconfig -a                                       |  #
+grep inet[^6]                                     |  # extract lines including ipv4 address
+sed 's/.*inet[^6][^0-9]*\([0-9.]*\)[^0-9]*.*/\1/' |  # extract only ipv4 address
+grep '^192\.168\.'                                   # remove private address(class C)

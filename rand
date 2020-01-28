@@ -1,0 +1,34 @@
+#! /bin/sh
+
+######################################################################
+#
+# RAND - return random value
+#
+# USAGE: rand 
+#
+######################################################################
+
+######################################################################
+# Initial Configuration
+######################################################################
+
+
+# === Initialize shell environment ===================================
+set -u
+umask 0222  # not alow to write
+export LC_ALL=C
+type command >/dev/null 2>&1 && type getconf >/dev/null 2>&1 &&
+export PATH="$(command -p getconf PATH)${PATH+:}${PATH-}"
+export UNIX_STD=2003  # to make HP-UX conform to POSIX
+
+
+LF=$(printf '\\\n_');LF=${LF%_}       # define LF for sed.
+(ps -Ao pid,etime,pcpu,vsz; date)   | # the source of randamize(process info + date)
+od -t d4 -A n -v                    | # Quantified(-A n: hide address on left side.; -v: disable Omission)
+sed 's/[^0-9]\{1,\}/'"$LF"'/g'      | # replace strings starting with no number with LF.
+grep '[0-9]'                        | # get only numbers
+tail -n 42                          | # get tail 42 before eof
+sed 's/.*\(.\{8\}\)$/\1/g'          | # the number less than 100000000(2^32)
+awk 'BEGIN{a=-2147483648;}
+     {a+=$1;}
+     END{srand(a); print rand();}'

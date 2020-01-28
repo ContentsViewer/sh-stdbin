@@ -1,0 +1,7 @@
+From: I <fivetwothreesix@gmail.com>
+To: You <onetenfivetwo@outlook.jp>
+Subject: Hello
+
+Hello!
+Can you see it?
+This mail sended by shell script.
