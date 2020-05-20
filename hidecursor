@@ -1,0 +1,5 @@
+#!/bin/sh
+
+hide_cursor() { printf "\e[?25l"; }
+
+hide_cursor

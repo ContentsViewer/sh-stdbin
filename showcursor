@@ -1,0 +1,5 @@
+#!/bin/sh
+
+show_cursor() { printf "\e[?25h"; }
+
+show_cursor

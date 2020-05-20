@@ -1,0 +1,52 @@
+#!/bin/sh
+
+######################################################################
+# 
+# PROGRESSBAR
+# 
+######################################################################
+
+# ECHO command in Solaris sh runs always with -e option.
+# and it cannot regard -e option
+# So we are going to select "echo -e" or "echo".
+ECHO='echo -e'
+case `$ECHO` in
+  -e)
+    ECHO=echo;;
+esac
+
+print_bar()
+{
+  percent=$1
+
+  column=`expr 71 \* "$percent" / 100`
+  nspace=`expr 71 - "$column"`
+
+  bar='\r['
+  set dummy
+  while [ $# -le "$column" ]
+  do
+    bar=$bar'='
+    set - "$@" dummy # count up $#
+  done
+  bar=$bar'>'
+
+  set dummy # reset $# to 1
+  while [ $# -le "$nspace" ]
+  do 
+    bar=$bar' '
+    set - "$@" dummy
+  done
+  bar=$bar'] '$percent'%\c'
+
+  $ECHO "$bar"
+}
+
+i=0
+while [ "$i" -le 100 ]
+do 
+  print_bar "$i" 
+  i=`expr "$i" + 1`
+  sleep 1
+done
+echo # add new line
